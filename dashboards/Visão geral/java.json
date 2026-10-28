@@ -1,0 +1,642 @@
+{
+  "uid": "solaria-overview-java",
+  "title": "Java",
+  "description": "Indicadores HTTP dos serviços Java instrumentados. Selecione um serviço ou todos; ausência de dados não mede disponibilidade.",
+  "tags": [
+    "java",
+    "otel"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "browser",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "refresh": 1,
+        "current": {
+          "selected": true,
+          "text": "Prometheus",
+          "value": "Prometheus"
+        },
+        "options": []
+      },
+      {
+        "name": "DS_LOKI",
+        "label": "Loki",
+        "type": "datasource",
+        "query": "loki",
+        "refresh": 1,
+        "current": {
+          "selected": true,
+          "text": "Loki",
+          "value": "Loki"
+        },
+        "options": []
+      },
+      {
+        "name": "DS_TEMPO",
+        "label": "Tempo",
+        "type": "datasource",
+        "query": "tempo",
+        "refresh": 1,
+        "current": {
+          "selected": true,
+          "text": "Tempo",
+          "value": "Tempo"
+        },
+        "options": []
+      },
+      {
+        "name": "service",
+        "label": "Serviço",
+        "type": "custom",
+        "query": "api-auth : auth, api-core : core, api-messenger : messager, api-notify : api-notify",
+        "refresh": 0,
+        "includeAll": true,
+        "multi": true,
+        "allValue": "auth|core|messager|api-notify",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "sort": 1
+      },
+      {
+        "name": "environment",
+        "label": "Ambiente",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": {
+          "query": "label_values(target_info{service_name=~\"${service:regex}\"},deployment_environment)",
+          "refId": "env"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Indicadores essenciais",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Requisições por segundo",
+      "description": "Volume de chamadas HTTP observadas. Zero tráfego não confirma disponibilidade.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\"}[$__rate_interval]))",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "none",
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Taxa de erros 5xx",
+      "description": "Percentual de respostas 5xx entre as requisições. Respostas 4xx não são tratadas como falhas do servidor.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "100 * (sum(rate(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\",status=~\"5..\"}[$__rate_interval])) or on() (0 * sum(rate(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\"}[$__rate_interval])))) / sum(rate(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\"}[$__rate_interval]))",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "none",
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Erros 5xx no período",
+      "description": "Contagem estimada de respostas 5xx no intervalo selecionado.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "round(sum(increase(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\",status=~\"5..\"}[$__range])) or on() (0 * sum(increase(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\"}[$__range]))))",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "none",
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Latência p95 — sucesso",
+      "description": "Percentil 95 das respostas 2xx/3xx, em milissegundos. Interprete com cautela quando há poucas requisições.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_milliseconds_bucket{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\",status=~\"2..|3..\"}[$__rate_interval])))",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "none",
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "Tendências e rotas",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Requisições por segundo — 2xx / 4xx / 5xx",
+      "description": "Respostas 4xx ficam separadas: 401 pode ser esperado em uma API de autenticação.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\",status=~\"2..\"}[$__rate_interval]))",
+          "legendFormat": "2xx",
+          "format": "time_series"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\",status=~\"4..\"}[$__rate_interval])) or on() (0 * sum(rate(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\"}[$__rate_interval])))",
+          "legendFormat": "4xx",
+          "format": "time_series"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\",status=~\"5..\"}[$__rate_interval])) or on() (0 * sum(rate(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\"}[$__rate_interval])))",
+          "legendFormat": "5xx",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Latência p95 — sucesso ao longo do tempo",
+      "description": "Somente respostas 2xx/3xx; p95 pode oscilar com baixo tráfego.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (service_name,le) (rate(http_server_requests_milliseconds_bucket{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\",status=~\"2..|3..\"}[$__rate_interval])))",
+          "legendFormat": "{{service_name}}",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Volume por rota, método e status",
+      "description": "Contagem estimada no período. uri=UNKNOWN pode ocorrer em chamadas bloqueadas antes da resolução da rota.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "round(sum by (service_name,uri,method,status) (increase(http_server_requests_milliseconds_count{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\"}[$__range])))",
+          "format": "table",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Latência p95 por rota — sucesso",
+      "description": "Percentil 95 por rota e método no período selecionado, para respostas 2xx/3xx. Rotas com poucas chamadas exigem cautela.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (service_name,uri,method,le) (increase(http_server_requests_milliseconds_bucket{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\",status=~\"2..|3..\",uri!=\"UNKNOWN\"}[$__range])))",
+          "format": "table",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Investigação — logs e traces",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "logs",
+      "title": "Logs dos serviços Java",
+      "description": "Selecione uma linha com trace_id para investigar no Tempo.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "expr": "{service_name=~\"${service:regex}\",deployment_environment=~\"$environment\"}",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "id": 18,
+      "type": "table",
+      "title": "Traces recentes dos serviços Java",
+      "description": "Traces do serviço no ambiente selecionado. Abra um trace_id dos logs para investigar a mesma requisição.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "${DS_TEMPO}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${DS_TEMPO}"
+          },
+          "queryType": "traceql",
+          "query": "{ resource.service.name =~ \"${service:regex}\" && resource.deployment.environment =~ \"${environment:regex}\" }",
+          "limit": 20,
+          "tableType": "traces"
+        }
+      ],
+      "options": {
+        "showHeader": true
+      }
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "links": []
+}
